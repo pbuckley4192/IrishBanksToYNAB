@@ -1,7 +1,9 @@
 import csv
-import sys
 import os
-from flask import Flask, render_template, flash, request, redirect, url_for,send_from_directory
+import sys
+
+from flask import (Flask, flash, redirect, render_template, request,
+                   send_from_directory)
 from werkzeug.utils import secure_filename
 
 UPLOAD_FOLDER = '/tmp'
@@ -9,53 +11,58 @@ ALLOWED_EXTENSIONS = set(['csv'])
 
 APP = Flask("BankConverter")
 APP.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-OUTPUT_FOLDER=UPLOAD_FOLDER+'/converted.csv'
-
-# Redirect STDOut
-sys.stdout = open(OUTPUT_FOLDER, 'w')
+OUTPUT_FILE = UPLOAD_FOLDER+'/converted.csv'
 
 def convert(file_uploaded):
-    # Open CSV File
-    file = open(file_uploaded, mode='r')
-    csv_file = csv.DictReader(file)
 
-    # Print Header
-    print("date;paymode;info;payee;memo;amount;category;tags")
+    # Open Input CSV File
+    input_file = open(file_uploaded, mode='r')
+    csv_file = csv.DictReader(input_file)
+
+    # Remove Existing File
+    if os.path.exists(OUTPUT_FILE):
+        os.remove(OUTPUT_FILE)
+
+    # Open Output file
+    output = open(OUTPUT_FILE, 'w')
+
+    # Write Header
+    output.write("date;paymode;info;payee;memo;amount;category;tags\n")
 
     # Parse out the statment
     for row in csv_file:
-            
-            # Description of the transaction
-            description=""
 
-            # Was it Point of Sale?
-            POS = 0
-        
-            # Amount of transaction
-            amount = 0
+        # Description of the transaction
+        description = ""
 
-            # Ignore invalid lines
-            if(not len(row["Date"])):
-                continue
-            
+        # Was it Point of Sale?
+        POS = 0
 
-            # Parse out the POS details
-            if str(row["Details"]).startswith("POS"):
-                    subs = str(row["Details"]).split(" ", 1)
-                    POS = 6
-                    description = subs[1].lstrip()
-            else:
-                    description = row["Details"].lstrip()
+        # Amount of transaction
+        amount = 0
+
+        # Ignore invalid lines
+        if(not len(row["Date"])):
+            continue
+
+        # Parse out the POS details
+        if str(row["Details"]).startswith("POS"):
+            subs = str(row["Details"]).split(" ", 1)
+            POS = 6
+            description = subs[1].lstrip()
+        else:
+            description = row["Details"].lstrip()
 
 
-            # Convert from Debit/Credit to abs amount
-            if(not len(row["Credit"])):
-                amount= 0 - float(row["Debit"])
-            else:
-                amount= row["Credit"]
+        # Convert from Debit/Credit to abs amount
+        if(not len(row["Credit"])):
+            amount = 0 - float(row["Debit"])
+        else:
+            amount = row["Credit"]
 
-            # Print to homebank format
-            print(row["Date"]+";"+str(POS)+";;"+ description+";;"+str(amount)+";;")
+        # Print to homebank format
+        output.write(row["Date"]+";"+str(POS)+";;"+ description+";;"+str(amount)+";;\n")
+    output.close()
 
 
 def allowed_file(filename):
@@ -77,11 +84,11 @@ def upload_file():
             return redirect(request.url)
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
-            file.save(os.path.join(APP.config['UPLOAD_FOLDER'], filename))
-            convert(os.path.join(APP.config['UPLOAD_FOLDER'], filename))
-            return send_from_directory(directory=APP.config['UPLOAD_FOLDER'], filename='converted.csv', as_attachment=True)
+            file.save(os.path.join(UPLOAD_FOLDER, filename))
+            convert(os.path.join(UPLOAD_FOLDER, filename))
+            return send_from_directory(directory=UPLOAD_FOLDER, filename='converted.csv', as_attachment=True)
 
     return render_template('index.html')
 
-
-APP.run()
+if __name__ == "__main__":
+    APP.run()
