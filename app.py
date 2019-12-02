@@ -9,7 +9,7 @@ from werkzeug.utils import secure_filename
 UPLOAD_FOLDER = '/tmp'
 ALLOWED_EXTENSIONS = set(['csv'])
 
-APP = Flask("BankConverter")
+APP = Flask("Bank Statement Converter")
 APP.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 OUTPUT_FILE = UPLOAD_FOLDER+'/converted.csv'
 
