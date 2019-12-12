@@ -31,38 +31,72 @@ def convert(file_uploaded):
 
     # Parse out the statment
     for row in csv_file:
-
-        # Description of the transaction
-        description = ""
-
-        # Was it Point of Sale?
-        POS = 0
-
-        # Amount of transaction
-        amount = 0
-
-        # Ignore invalid lines
-        if(not len(row["Date"])):
-            continue
-
-        # Parse out the POS details
-        if str(row["Details"]).startswith("POS"):
-            subs = str(row["Details"]).split(" ", 1)
-            POS = 6
-            description = subs[1].lstrip()
+        if(csv_file.fieldnames[0] != "Posted Account"):
+            boi_line_parser(row,output)
         else:
-            description = row["Details"].lstrip()
+            aib_line_parser(row,output)
 
-
-        # Convert from Debit/Credit to abs amount
-        if(not len(row["Credit"])):
-            amount = 0 - float(row["Debit"])
-        else:
-            amount = row["Credit"]
-
-        # Print to homebank format
-        output.write(row["Date"]+";"+str(POS)+";;"+ description+";;"+str(amount)+";;\n")
     output.close()
+
+
+def boi_line_parser(row,output):
+
+    # Description of the transaction
+    description = ""
+
+    # Was it Point of Sale?
+    POS = 0
+
+    # Amount of transaction
+    amount = 0
+
+    # Ignore invalid lines
+    if(not len(row["Date"])):
+        return
+
+    # Parse out the POS details
+    if str(row["Details"]).startswith("POS"):
+        subs = str(row["Details"]).split(" ", 1)
+        POS = 6
+        description = subs[1].lstrip()
+    else:
+        description = row["Details"].lstrip()
+
+
+    # Convert from Debit/Credit to abs amount
+    if(not len(row["Credit"])):
+        amount = 0 - float(row["Debit"])
+    else:
+        amount = row["Credit"]
+
+    # Print to homebank format
+    output.write(row["Date"]+";"+str(POS)+";;"+ description+";;"+str(amount)+";;\n")
+
+def aib_line_parser(row,output):
+
+    # Ignore invalid lines
+    if(not len(row[" Posted Transactions Date"])):
+        return
+
+    # Description of the transaction
+    description = row[" Description"].lstrip()
+
+    # Was it Point of Sale?
+    POS = 0
+
+    # Amount of transaction
+    amount = 0
+
+    # Convert from Debit/Credit to abs amount
+    if(not len(row[" Credit Amount"])):
+        if(not len(row[" Debit Amount"])):
+            return
+        amount = 0 - float(row[" Debit Amount"])
+    else:
+        amount = row[" Credit Amount"]
+
+    # Print to homebank format
+    output.write(row[" Posted Transactions Date"].replace("/","-")+";"+str(POS)+";;"+ description+";;"+str(amount)+";;\n")
 
 
 def allowed_file(filename):
